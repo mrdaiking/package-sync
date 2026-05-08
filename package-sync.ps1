@@ -65,9 +65,19 @@ function Invoke-Init {
     $hooksDir = Join-Path $script:PkgSyncDir 'hooks'
     if (-not (Test-Path $hooksDir)) { New-Item -ItemType Directory $hooksDir | Out-Null }
 
+    # Resolve hooks source: prefer PkgSyncDir (git clone), fall back to script location
     $scriptDir = Split-Path -Parent $MyInvocation.PSCommandPath
-    Copy-Item (Join-Path $scriptDir 'hooks\profile.ps1') (Join-Path $hooksDir 'profile.ps1') -Force
-    Copy-Item (Join-Path $scriptDir 'hooks\notify.ps1')  (Join-Path $hooksDir 'notify.ps1')  -Force
+    $srcDir = if (Test-Path (Join-Path $script:PkgSyncDir 'hooks\profile.ps1')) {
+        $script:PkgSyncDir
+    } else {
+        $scriptDir
+    }
+
+    $profileSrc = Join-Path $srcDir 'hooks\profile.ps1'
+    $notifySrc  = Join-Path $srcDir 'hooks\notify.ps1'
+
+    if (Test-Path $profileSrc) { Copy-Item $profileSrc (Join-Path $hooksDir 'profile.ps1') -Force }
+    if (Test-Path $notifySrc)  { Copy-Item $notifySrc  (Join-Path $hooksDir 'notify.ps1')  -Force }
 
     $hookLine = '. "$HOME\.package-sync\hooks\profile.ps1"'
     $profilePath = $PROFILE
