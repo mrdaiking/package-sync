@@ -353,20 +353,18 @@ Supported managers: winget, pip, npm, cargo, choco, curl
 # ── entry point ───────────────────────────────────────────────────────────────
 
 $cmd  = if ($args.Count -gt 0) { $args[0] } else { 'help' }
-$rest = if ($args.Count -gt 1) { $args[1..($args.Count - 1)] } else { @() }
-
-function _val($arr, $i, $default = '') {
-    if ($arr.Count -gt $i -and $null -ne $arr[$i] -and $arr[$i] -ne '') { $arr[$i] } else { $default }
-}
+$arg1 = if ($args.Count -gt 1) { $args[1] } else { '' }
+$arg2 = if ($args.Count -gt 2) { $args[2] } else { '' }
+$arg3 = if ($args.Count -gt 3) { $args[3] } else { '' }
 
 switch ($cmd) {
     'init'    { Invoke-Init }
-    'add'     { Invoke-Add    -Name $rest[0] -Manager (_val $rest 1 'winget') -Url (_val $rest 2) }
-    'remove'  { Invoke-Remove -Name $rest[0] -Manager (_val $rest 1) }
-    'list'    { Invoke-List   -Filter (_val $rest 0 'all') }
+    'add'     { Invoke-Add    -Name $arg1 -Manager (if ($arg2) { $arg2 } else { 'winget' }) -Url $arg3 }
+    'remove'  { Invoke-Remove -Name $arg1 -Manager $arg2 }
+    'list'    { Invoke-List   -Filter (if ($arg1) { $arg1 } else { 'all' }) }
     'scan'    { Invoke-Scan }
     'install' { Invoke-Install }
-    'sync'    { Invoke-Sync   -SubCmd (_val $rest 0 'push') -GistIdArg (_val $rest 1) }
+    'sync'    { Invoke-Sync   -SubCmd (if ($arg1) { $arg1 } else { 'push' }) -GistIdArg $arg2 }
     { $_ -in '--version', '-v' } { Write-Host "package-sync v$($script:Version)" }
     default   { Show-Help }
 }
