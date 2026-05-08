@@ -226,7 +226,9 @@ function Invoke-Scan {
 
     # npm global
     if (Get-Command npm -ErrorAction SilentlyContinue) {
-        npm list -g --depth=0 --parseable 2>$null | Select-Object -Skip 1 | ForEach-Object {
+        $npmOut = npm list -g --depth=0 --parseable --silent 2>&1
+        ($npmOut | Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] } |
+            Select-Object -Skip 1) | ForEach-Object {
             $n = Split-Path $_ -Leaf
             if ($n -and $n -notin $tracked) {
                 $untracked.Add(@{ manager = 'npm'; name = $n })
