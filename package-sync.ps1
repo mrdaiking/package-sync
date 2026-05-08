@@ -76,8 +76,10 @@ function Invoke-Init {
     $profileSrc = Join-Path $srcDir 'hooks\profile.ps1'
     $notifySrc  = Join-Path $srcDir 'hooks\notify.ps1'
 
-    if (Test-Path $profileSrc) { Copy-Item $profileSrc (Join-Path $hooksDir 'profile.ps1') -Force }
-    if (Test-Path $notifySrc)  { Copy-Item $notifySrc  (Join-Path $hooksDir 'notify.ps1')  -Force }
+    $profileDst = Join-Path $hooksDir 'profile.ps1'
+    $notifyDst  = Join-Path $hooksDir 'notify.ps1'
+    if ((Test-Path $profileSrc) -and ($profileSrc -ne $profileDst)) { Copy-Item $profileSrc $profileDst -Force }
+    if ((Test-Path $notifySrc)  -and ($notifySrc  -ne $notifyDst))  { Copy-Item $notifySrc  $notifyDst  -Force }
 
     $hookLine = '. "$HOME\.package-sync\hooks\profile.ps1"'
     $profilePath = $PROFILE
