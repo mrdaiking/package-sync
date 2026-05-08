@@ -81,7 +81,8 @@ if (Test-Path $_notifyScript) { . $_notifyScript }
 $script:_OriginalPrompt = $function:prompt
 
 function global:prompt {
-    $lastCmd = (Get-History -Count 1 -ErrorAction SilentlyContinue)?.CommandLine
+    $h = Get-History -Count 1 -ErrorAction SilentlyContinue
+    $lastCmd = if ($h) { $h.CommandLine } else { $null }
     if ($lastCmd -and $lastCmd -ne $script:_PkgSyncLastCmd) {
         $script:_PkgSyncLastCmd = $lastCmd
         if (_pkgsync_is_install_cmd $lastCmd) {

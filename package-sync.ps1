@@ -301,10 +301,9 @@ function Invoke-Sync {
             if (-not $gistId) { Write-Error 'No gist configured.' }
             $content = gh api "/gists/$gistId" --jq '.files["packages.json"].content'
             $remote = $content | ConvertFrom-Json
+            $data = Read-PkgFile
             $localNames  = @($data.packages | Select-Object -ExpandProperty name | Sort-Object)
             $remoteNames = @($remote.packages | Select-Object -ExpandProperty name | Sort-Object)
-
-            $data = Read-PkgFile
             $onlyRemote = $remoteNames | Where-Object { $_ -notin $localNames }
             $onlyLocal  = $localNames  | Where-Object { $_ -notin $remoteNames }
 
@@ -342,14 +341,18 @@ Supported managers: winget, pip, npm, cargo, choco, curl
 $cmd  = if ($args.Count -gt 0) { $args[0] } else { 'help' }
 $rest = if ($args.Count -gt 1) { $args[1..($args.Count - 1)] } else { @() }
 
+function _val($arr, $i, $default = '') {
+    if ($arr.Count -gt $i -and $null -ne $arr[$i] -and $arr[$i] -ne '') { $arr[$i] } else { $default }
+}
+
 switch ($cmd) {
     'init'    { Invoke-Init }
-    'add'     { Invoke-Add    -Name $rest[0] -Manager ($rest[1] ?? 'winget') -Url ($rest[2] ?? '') }
-    'remove'  { Invoke-Remove -Name $rest[0] -Manager ($rest[1] ?? '') }
-    'list'    { Invoke-List   -Filter ($rest[0] ?? 'all') }
+    'add'     { Invoke-Add    -Name $rest[0] -Manager (_val $rest 1 'winget') -Url (_val $rest 2) }
+    'remove'  { Invoke-Remove -Name $rest[0] -Manager (_val $rest 1) }
+    'list'    { Invoke-List   -Filter (_val $rest 0 'all') }
     'scan'    { Invoke-Scan }
     'install' { Invoke-Install }
-    'sync'    { Invoke-Sync   -SubCmd ($rest[0] ?? 'push') -GistIdArg ($rest[1] ?? '') }
+    'sync'    { Invoke-Sync   -SubCmd (_val $rest 0 'push') -GistIdArg (_val $rest 1) }
     { $_ -in '--version', '-v' } { Write-Host "package-sync v$($script:Version)" }
     default   { Show-Help }
 }
