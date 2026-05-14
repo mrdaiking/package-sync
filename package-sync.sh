@@ -44,8 +44,8 @@ cmd_init() {
   local script_dir; script_dir="$(cd "$(dirname "$src")" && pwd)"
 
   mkdir -p "$PKGSYNC_DIR/hooks"
-  cp "$script_dir/hooks/shell.sh" "$PKGSYNC_DIR/hooks/shell.sh"
-  cp "$script_dir/hooks/notify.sh" "$PKGSYNC_DIR/hooks/notify.sh"
+  [[ "$script_dir" != "$PKGSYNC_DIR" ]] && cp "$script_dir/hooks/shell.sh" "$PKGSYNC_DIR/hooks/shell.sh"
+  [[ "$script_dir" != "$PKGSYNC_DIR" ]] && cp "$script_dir/hooks/notify.sh" "$PKGSYNC_DIR/hooks/notify.sh"
 
   echo "Initialized. Restart terminal or run: source $shell_rc"
 }
