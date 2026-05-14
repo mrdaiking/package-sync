@@ -164,6 +164,11 @@ cmd_install() {
 }
 
 cmd_sync() {
+  if ! command -v gh &>/dev/null; then
+    echo "Error: 'gh' (GitHub CLI) required for sync. Install:"
+    echo "  brew install gh && gh auth login"
+    exit 1
+  fi
   _ensure_init
   local subcmd="${1:-push}"
   local gist_id

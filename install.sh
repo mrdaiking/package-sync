@@ -24,6 +24,11 @@ for dep in jq git; do
   fi
 done
 
+if ! command -v gh &>/dev/null; then
+  echo "Note: 'gh' (GitHub CLI) not found — required for sync features."
+  echo "  brew install gh && gh auth login"
+fi
+
 # Clone or update
 if [[ -d "$INSTALL_DIR/.git" ]]; then
   echo "Updating existing installation..."
