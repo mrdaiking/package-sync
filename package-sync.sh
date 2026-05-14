@@ -79,7 +79,7 @@ cmd_add() {
   tmp="$(mktemp)"
   jq --arg n "$name" --arg m "$manager" --arg p "$platform" \
      --arg d "$device" --arg t "$timestamp" --arg u "$url" \
-    '.packages += [{"name":$n,"manager":$m,"platform":$p,"device":$d,"added":$t} + (if $u != "" then {"url":$u} else {} end)]' \
+    '.packages += [{"name":$n,"manager":$m,"platform":$p,"device":$d,"added":$t,"synced":false} + (if $u != "" then {"url":$u} else {} end)]' \
     "$PACKAGES_FILE" > "$tmp" && mv "$tmp" "$PACKAGES_FILE"
 
   if [[ -n "$url" ]]; then
@@ -117,7 +117,7 @@ cmd_list() {
 
   case "$filter" in
     all)
-      jq -r '.packages[] | "\(.manager)\t\(.name)\t[\(.platform)] — \(.device) @ \(.added)\(if .url then " | \(.url)" else "" end)"' \
+      jq -r '.packages[] | "\(.manager)\t\(.name)\t[\(.platform)] — \(.device) @ \(.added)\(if .url then " | \(.url)" else "" end)\t\(if .synced == true then "synced" else "unsynced" end)"' \
         "$PACKAGES_FILE" | sort | column -t -s $'\t'
       ;;
     brew|apt|pip|npm|cargo|winget)
@@ -200,7 +200,11 @@ cmd_sync() {
     push)
       [[ -z "$gist_id" || "$gist_id" == "null" ]] && \
         { echo "No gist configured. Run: package-sync sync setup"; exit 1; }
-      gh gist edit "$gist_id" --filename packages.json "$PACKAGES_FILE"
+      local tmp_push; tmp_push="$(mktemp)"
+      jq '[.packages[] |= (.synced = true)] | {version,packages}' "$PACKAGES_FILE" > "$tmp_push" 2>/dev/null \
+        || jq '.packages[] |= (.synced = true)' "$PACKAGES_FILE" > "$tmp_push"
+      gh gist edit "$gist_id" --filename packages.json "$tmp_push"
+      mv "$tmp_push" "$PACKAGES_FILE"
       echo "Pushed to gist: $gist_id"
       ;;
     pull)
@@ -210,7 +214,9 @@ cmd_sync() {
       gh api "/gists/$gist_id" --jq '.files["packages.json"].content' > "$tmp" 2>/dev/null \
         || { echo "Failed to fetch gist. Check: gh auth status"; rm "$tmp"; exit 1; }
       jq . "$tmp" &>/dev/null || { echo "Remote content invalid JSON. Run: package-sync sync push first."; rm "$tmp"; exit 1; }
-      mv "$tmp" "$PACKAGES_FILE"
+      local tmp_pull; tmp_pull="$(mktemp)"
+      jq '.packages[] |= (.synced = true)' "$tmp" > "$tmp_pull" && mv "$tmp_pull" "$PACKAGES_FILE"
+      rm -f "$tmp"
       echo "Pulled from gist: $gist_id"
       ;;
     status)
