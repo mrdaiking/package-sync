@@ -88,4 +88,14 @@ Run: package-sync sync pull
 - `gh` — GitHub CLI (for sync feature only)
 - zsh or bash
 
+## Troubleshooting
+
+**`cp: ... and ... are identical` on install**
+
+Fixed in v0.1.1+. Re-run the installer to get the patched version:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mrdaiking/package-sync/main/install.sh | bash
+```
+
 
