@@ -4,8 +4,10 @@ Cross-device package backup and sync. Never forget what you installed.
 
 ## Features
 
-- **Backup** — track packages from any manager (brew, pip, npm, cargo, apt, winget)
+- **Backup** — track packages from any manager (brew, cask, pip, npm, cargo, gem, go, apt, winget)
 - **Auto-detect** — shell hook prompts when you install something new
+- **Scan** — detect already-installed packages including DMG apps (`/Applications`)
+- **Sync status** — `list` shows whether each package is synced to remote
 - **Cross-device sync** — GitHub Gist keeps all machines in sync
 - **Restore** — one command to install everything on a new machine
 
@@ -22,17 +24,24 @@ package-sync init          # add hook to your shell
 package-sync sync setup    # create GitHub Gist for sync
 ```
 
+> **Note:** `sync` requires the GitHub CLI. Install with `brew install gh && gh auth login`.
+
 ## Usage
 
 ```bash
 # Add a package manually
 package-sync add ripgrep brew
+package-sync add visual-studio-code cask   # brew cask apps
 package-sync add black pip
 package-sync add prettier npm
 
-# List tracked packages
+# Scan all installed packages and pick which to track
+package-sync scan
+
+# List tracked packages (shows sync status)
 package-sync list
 package-sync list brew
+package-sync list cask
 
 # Install everything on a new machine
 package-sync install
@@ -46,6 +55,28 @@ package-sync sync status   # see diff between devices
 package-sync sync setup <gist-id>
 ```
 
+## Scan (detect already-installed packages)
+
+`package-sync scan` finds packages installed before the hook was active:
+
+```
+Found 57 untracked package(s):
+
+  [  1] (brew)  git
+  [  2] (cask)  maccy
+  [  3] (app)   Cursor
+  [  4] (app)   Visual Studio Code
+  [  5] (app)   Ollama
+  ...
+
+Options:
+  a   — add all
+  1,3 — add by number (comma-separated)
+  q   — quit
+```
+
+Scans: `brew` formulae (top-level only), `brew` casks, `pip` (top-level), `npm -g`, `cargo`, `gem` (user-installed), `/Applications` (DMG/direct installs).
+
 ## Auto-detect (Usage 2)
 
 After `package-sync init`, the shell hook watches for install commands:
@@ -54,11 +85,10 @@ After `package-sync init`, the shell hook watches for install commands:
 $ brew install ripgrep
 
 📦 package-sync: Add 'ripgrep' to your backup?
-   Run: package-sync add ripgrep brew
    Add now? [y/N]
 ```
 
-Supports: `brew`, `pip`, `pip3`, `npm -g`, `cargo`, `apt`, `gem`, `curl|bash`
+Supports: `brew install`, `brew install --cask`, `pip`, `pip3`, `npm -g`, `cargo`, `apt`, `gem`, `go install`, `curl|bash`
 
 ## Cross-device notification (Usage 3)
 
@@ -72,15 +102,20 @@ Run: package-sync sync pull
 
 ## Supported Package Managers
 
-| Manager | Platform |
-|---------|----------|
-| brew    | macOS, Linux |
-| apt     | Debian/Ubuntu |
-| pip     | All |
-| npm -g  | All |
-| cargo   | All |
-| winget  | Windows |
-| gem     | All |
+| Manager | Install command       | Platform     |
+|---------|-----------------------|--------------|
+| brew    | `brew install`        | macOS, Linux |
+| cask    | `brew install --cask` | macOS        |
+| apt     | `apt install`         | Debian/Ubuntu|
+| pip     | `pip install`         | All          |
+| npm     | `npm install -g`      | All          |
+| cargo   | `cargo install`       | All          |
+| gem     | `gem install`         | All          |
+| go      | `go install`          | All          |
+| winget  | `winget install`      | Windows      |
+| app     | DMG / direct download | macOS        |
+
+> `app` entries are tracked for awareness. `package-sync install` will print a manual-install reminder for them.
 
 ## Requirements
 
@@ -90,12 +125,26 @@ Run: package-sync sync pull
 
 ## Troubleshooting
 
-**`cp: ... and ... are identical` on install**
+**`cp: ... and ... are identical` on install or init**
 
-Fixed in v0.1.1+. Re-run the installer to get the patched version:
+Fixed in latest version. Update:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/mrdaiking/package-sync/main/install.sh | bash
 ```
 
+Or if already installed:
 
+```bash
+git -C ~/.package-sync pull
+```
+
+**`gh: command not found` when running sync**
+
+```bash
+brew install gh && gh auth login
+```
+
+**Apps like VSCode, Cursor, Ollama not detected by hook**
+
+These are installed via DMG, not a package manager. Run `package-sync scan` to detect them from `/Applications`.
