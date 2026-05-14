@@ -38,7 +38,6 @@ chmod +x "$INSTALL_DIR/package-sync.sh"
 chmod +x "$INSTALL_DIR/hooks/shell.sh"
 chmod +x "$INSTALL_DIR/sync/gist.sh"
 mkdir -p "$INSTALL_DIR/hooks" "$INSTALL_DIR/bin"
-cp "$INSTALL_DIR/hooks/shell.sh" "$INSTALL_DIR/hooks/shell.sh"
 
 # Symlink binary
 mkdir -p "$BIN_DIR"
