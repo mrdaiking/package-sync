@@ -149,6 +149,7 @@ cmd_install() {
       gem)    gem install "$name" ;;
       go)     go install "$name" ;;
       apt)    sudo apt-get install -y "$name" ;;
+      app)    echo "  Manual install required: $name" ;;
       curl)
         if [[ -n "$url" ]]; then
           echo "  Running: curl -fsSL $url | bash"
@@ -304,6 +305,23 @@ cmd_scan() {
       echo "$tracked_names" | grep -qx "$name" || untracked+=("gem:$name")
     done < <(gem list --user-installed --no-versions 2>/dev/null)
   fi
+
+  # /Applications — .app bundles not covered by any package manager
+  local _system_apps="Safari|Mail|Calendar|Maps|Photos|FaceTime|Messages|Notes|Reminders|Preview|TextEdit|Finder|App Store|System Preferences|System Settings|Xcode|iTunes|Music|Podcasts|News|Stocks|Home|Shortcuts|Books|Calculator|Chess|Clock|Contacts|Dashboard|Dictionary|DVD Player|Font Book|Image Capture|Launchpad|Migration Assistant|Mission Control|Numbers|Pages|Keynote|Photo Booth|QuickTime Player|Script Editor|Siri|Stickies|Terminal|Time Machine|VoiceOver Utility|Automator|Activity Monitor|Console|Disk Utility|Grapher|Instruments|Simulator|Archive Utility"
+  local _brew_casks
+  _brew_casks="$(brew list --cask 2>/dev/null)"
+  while IFS= read -r app; do
+    [[ -z "$app" ]] && continue
+    local appname="${app%.app}"
+    # skip system apps
+    echo "$appname" | grep -qiE "^($_system_apps)$" && continue
+    # skip if already tracked by brew cask (case-insensitive match on name)
+    local appname_lower; appname_lower="$(echo "$appname" | tr '[:upper:]' '[:lower:]' | tr ' ' '-')"
+    echo "$_brew_casks" | grep -qi "^${appname_lower}$" && continue
+    # skip if already tracked in packages.json
+    echo "$tracked_names" | grep -qix "$appname" && continue
+    untracked+=("app:$appname")
+  done < <(ls /Applications 2>/dev/null | grep '\.app$')
 
   if [[ ${#untracked[@]} -eq 0 ]]; then
     echo "All installed packages already tracked."
