@@ -256,27 +256,27 @@ cmd_scan() {
   # Collect untracked packages as "manager:name" pairs
   local untracked=()
 
-  # brew formulae
+  # brew top-level formulae only (leaves = not a dependency of anything else)
   if command -v brew &>/dev/null; then
     while IFS= read -r pkg; do
       [[ -z "$pkg" ]] && continue
       echo "$tracked_names" | grep -qx "$pkg" || untracked+=("brew:$pkg")
-    done < <(brew list --formula 2>/dev/null)
+    done < <(brew leaves 2>/dev/null)
 
-    # brew casks
+    # brew casks (all casks are explicit)
     while IFS= read -r pkg; do
       [[ -z "$pkg" ]] && continue
       echo "$tracked_names" | grep -qx "$pkg" || untracked+=("cask:$pkg")
     done < <(brew list --cask 2>/dev/null)
   fi
 
-  # pip
+  # pip top-level only (exclude packages required by others)
   if command -v pip3 &>/dev/null; then
     while IFS= read -r pkg; do
       [[ -z "$pkg" ]] && continue
       local name; name="$(echo "$pkg" | cut -d= -f1 | tr '[:upper:]' '[:lower:]')"
       echo "$tracked_names" | grep -qix "$name" || untracked+=("pip:$name")
-    done < <(pip3 list --format=freeze 2>/dev/null)
+    done < <(pip3 list --not-required --format=freeze 2>/dev/null)
   fi
 
   # npm global
@@ -296,13 +296,13 @@ cmd_scan() {
     done < <(cargo install --list 2>/dev/null | grep -E '^[a-z]')
   fi
 
-  # gem
+  # gem user-installed only (skip stdlib gems)
   if command -v gem &>/dev/null; then
     while IFS= read -r pkg; do
       [[ -z "$pkg" ]] && continue
       local name; name="$(echo "$pkg" | awk '{print $1}')"
       echo "$tracked_names" | grep -qx "$name" || untracked+=("gem:$name")
-    done < <(gem list --no-versions 2>/dev/null)
+    done < <(gem list --user-installed --no-versions 2>/dev/null)
   fi
 
   if [[ ${#untracked[@]} -eq 0 ]]; then
