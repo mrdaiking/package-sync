@@ -120,13 +120,13 @@ cmd_list() {
       jq -r '.packages[] | "\(.manager)\t\(.name)\t[\(.platform)] — \(.device) @ \(.added)\(if .url then " | \(.url)" else "" end)\t\(if .synced == true then "synced" else "unsynced" end)"' \
         "$PACKAGES_FILE" | sort | column -t -s $'\t'
       ;;
-    brew|apt|pip|npm|cargo|winget)
+    brew|cask|apt|pip|npm|cargo|gem|go|winget)
       jq -r --arg m "$filter" \
         '.packages[] | select(.manager==$m) | "\(.name)"' \
         "$PACKAGES_FILE"
       ;;
     *)
-      echo "Usage: package-sync list [all|brew|apt|pip|npm|cargo|winget]"
+      echo "Usage: package-sync list [all|brew|cask|apt|pip|npm|cargo|gem|go|winget]"
       ;;
   esac
 }
@@ -141,10 +141,13 @@ cmd_install() {
   while IFS=$'\t' read -r manager name url; do
     echo "→ [$manager] $name"
     case "$manager" in
-      brew)   brew install "$name" 2>/dev/null || brew install --cask "$name" 2>/dev/null || echo "  SKIP: $name" ;;
+      brew)   brew install "$name" 2>/dev/null || echo "  SKIP: $name" ;;
+      cask)   brew install --cask "$name" 2>/dev/null || echo "  SKIP: $name" ;;
       pip)    pip3 install "$name" ;;
       npm)    npm install -g "$name" ;;
       cargo)  cargo install "$name" ;;
+      gem)    gem install "$name" ;;
+      go)     go install "$name" ;;
       apt)    sudo apt-get install -y "$name" ;;
       curl)
         if [[ -n "$url" ]]; then
@@ -263,7 +266,7 @@ cmd_scan() {
     # brew casks
     while IFS= read -r pkg; do
       [[ -z "$pkg" ]] && continue
-      echo "$tracked_names" | grep -qx "$pkg" || untracked+=("brew-cask:$pkg")
+      echo "$tracked_names" | grep -qx "$pkg" || untracked+=("cask:$pkg")
     done < <(brew list --cask 2>/dev/null)
   fi
 
@@ -282,6 +285,24 @@ cmd_scan() {
       [[ -z "$pkg" ]] && continue
       echo "$tracked_names" | grep -qx "$pkg" || untracked+=("npm:$pkg")
     done < <(npm list -g --depth=0 --parseable 2>/dev/null | tail -n +2 | xargs -I{} basename {} 2>/dev/null)
+  fi
+
+  # cargo
+  if command -v cargo &>/dev/null; then
+    while IFS= read -r line; do
+      [[ -z "$line" ]] && continue
+      local name; name="$(echo "$line" | awk '{print $1}')"
+      echo "$tracked_names" | grep -qx "$name" || untracked+=("cargo:$name")
+    done < <(cargo install --list 2>/dev/null | grep -E '^[a-z]')
+  fi
+
+  # gem
+  if command -v gem &>/dev/null; then
+    while IFS= read -r pkg; do
+      [[ -z "$pkg" ]] && continue
+      local name; name="$(echo "$pkg" | awk '{print $1}')"
+      echo "$tracked_names" | grep -qx "$name" || untracked+=("gem:$name")
+    done < <(gem list --no-versions 2>/dev/null)
   fi
 
   if [[ ${#untracked[@]} -eq 0 ]]; then
@@ -315,7 +336,6 @@ cmd_scan() {
       for entry in "${untracked[@]}"; do
         local mgr="${entry%%:*}"
         local pkg="${entry#*:}"
-        [[ "$mgr" == "brew-cask" ]] && mgr="brew"
         cmd_add "$pkg" "$mgr"
       done
       ;;
@@ -327,7 +347,6 @@ cmd_scan() {
           local entry="${untracked[$((idx-1))]}"
           local mgr="${entry%%:*}"
           local pkg="${entry#*:}"
-          [[ "$mgr" == "brew-cask" ]] && mgr="brew"
           cmd_add "$pkg" "$mgr"
         else
           echo "Invalid: $idx — skip"
@@ -353,7 +372,7 @@ Commands:
   sync pull                   Pull list from Gist
   sync status                 Show diff between local and remote
 
-Supported managers: brew, apt, pip, npm, cargo, winget
+Supported managers: brew, cask, apt, pip, npm, cargo, gem, go, winget
 
 EOF
 }

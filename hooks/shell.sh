@@ -57,6 +57,7 @@ _pkgsync_extract_name() {
 _pkgsync_extract_manager() {
   local cmd="$1"
   case "$cmd" in
+    "brew install --cask"*|"brew install -s"*) echo "cask" ;;
     brew*)   echo "brew" ;;
     pip3*)   echo "pip" ;;
     pip*)    echo "pip" ;;
